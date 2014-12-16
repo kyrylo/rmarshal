@@ -1,0 +1,12 @@
+{application, rmarshal,
+ [
+  {description, ""},
+  {vsn, "1"},
+  {registered, []},
+  {applications, [
+                  kernel,
+                  stdlib
+                 ]},
+  {mod, { rmarshal_app, []}},
+  {env, []}
+ ]}.
