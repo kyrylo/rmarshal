@@ -191,3 +191,25 @@ load_symbol_array_test() ->
 
 load_float_123_456_test() ->
     ?ASSERT_EQL(123.456, "float_123.456").
+
+%%---------------
+%% HASH
+%%---------------
+
+load_hash_simple_test() ->
+    ?ASSERT_EQL(#{simple => 1, hash => 2}, "hash_simple").
+
+load_hash_nested_test() ->
+    ?ASSERT_EQL(#{simple => 1, nested => #{hi => 3}, hash => 2}, "hash_nested").
+
+load_hash_empty_test() ->
+    ?ASSERT_EQL(#{}, "hash_empty").
+
+load_hash_empty_nested_test() ->
+    ?ASSERT_EQL(#{#{} => #{}}, "hash_empty_nested").
+
+load_hash_string_keys_test() ->
+    ?ASSERT_EQL(#{"one" => 1, "two" => 2}, "hash_string_keys").
+
+load_hash_same_key_and_val_test() ->
+    ?ASSERT_EQL(#{one => one}, "hash_same_key_and_val").

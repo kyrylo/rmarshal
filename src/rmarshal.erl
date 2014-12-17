@@ -23,7 +23,8 @@ decode_chunk(?TYPE_IVAR,    Bin) -> decode_ivar(Bin);
 decode_chunk(?TYPE_ARRAY,   Bin) -> decode_array(Bin);
 decode_chunk(?TYPE_SYMBOL,  Bin) -> decode_symbol(Bin);
 decode_chunk(?TYPE_SYMLINK, Bin) -> decode_symlink(Bin);
-decode_chunk(?TYPE_FLOAT,   Bin) -> decode_float(Bin).
+decode_chunk(?TYPE_FLOAT,   Bin) -> decode_float(Bin);
+decode_chunk(?TYPE_HASH,    Bin) -> decode_hash(Bin).
 
 decode_fixnum(<<16#00, Rest/binary>>) ->
     {0, Rest};
@@ -102,3 +103,16 @@ decode_symlink(<<SymLink:8/integer, Rest/binary>>) ->
 decode_float(<<Len:8/integer, Rest/binary>>) ->
     {Float, Bin} = split_binary(Rest, Len - ?OFFSET),
     {binary_to_float(Float), Bin}.
+
+decode_hash(<<Size:8/integer, Rest/binary>>) ->
+    decode_hash(Size - ?OFFSET, Rest, maps:new()).
+
+decode_hash(Size, Bin, Decoded) when Size =< 0 ->
+    {Decoded, Bin};
+decode_hash(_Size, <<>>, _Decoded) ->
+    {#{}, <<>>};
+decode_hash(Size, <<Type:8/integer, Rest/binary>>, Decoded) ->
+    {DecodedKey, Bin} = decode_chunk(Type, Rest),
+    <<Type2:8/integer, Rest2/binary>> = Bin,
+    {DecodedVal, Bin2} = decode_chunk(Type2, Rest2),
+    decode_hash(Size - 1, Bin2, maps:put(DecodedKey, DecodedVal, Decoded)).
