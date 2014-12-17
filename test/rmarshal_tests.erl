@@ -174,3 +174,13 @@ load_array_empty_nested_test() ->
 
 load_array_empty_and_nonempty_test() ->
     ?ASSERT_EQL_LIST([[[], [1, 2], [[]]]], "array_empty_and_nonempty").
+
+%%---------------
+%% SYMBOL
+%%---------------
+
+load_symbol_hello_test() ->
+    ?ASSERT_EQL(hello, "symbol_hello").
+
+load_symbol_array_test() ->
+    ?ASSERT_EQL_LIST([[hello, goodbye, hello, goodbye, hi]], "symbol_array").

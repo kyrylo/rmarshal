@@ -4,20 +4,25 @@
 -include("marshal.hrl").
 
 load(<<?MARSHAL_MAJOR:8, ?MARSHAL_MINOR:8, Rest/binary>>) ->
+    rmarshal_symstorage:start(),
     decode(Rest, []).
 
-decode(<<>>, Decoded) -> {ok, Decoded};
+decode(<<>>, Decoded) ->
+    rmarshal_symstorage:stop(),
+    {ok, Decoded};
 decode(<<Type:8, Rest/binary>>, Decoded) ->
     {DecodedChunk, UndecodedRest} = decode_chunk(Type, Rest),
     decode(UndecodedRest, [DecodedChunk|Decoded]).
 
-decode_chunk(?TYPE_NIL,    Bin) -> {nil, Bin};
-decode_chunk(?TYPE_TRUE,   Bin) -> {true, Bin};
-decode_chunk(?TYPE_FALSE,  Bin) -> {false, Bin};
-decode_chunk(?TYPE_FIXNUM, Bin) -> decode_fixnum(Bin);
-decode_chunk(?TYPE_BIGNUM, Bin) -> decode_bignum(Bin);
-decode_chunk(?TYPE_IVAR,   Bin) -> decode_ivar(Bin);
-decode_chunk(?TYPE_ARRAY,  Bin) -> decode_array(Bin).
+decode_chunk(?TYPE_NIL,     Bin) -> {nil, Bin};
+decode_chunk(?TYPE_TRUE,    Bin) -> {true, Bin};
+decode_chunk(?TYPE_FALSE,   Bin) -> {false, Bin};
+decode_chunk(?TYPE_FIXNUM,  Bin) -> decode_fixnum(Bin);
+decode_chunk(?TYPE_BIGNUM,  Bin) -> decode_bignum(Bin);
+decode_chunk(?TYPE_IVAR,    Bin) -> decode_ivar(Bin);
+decode_chunk(?TYPE_ARRAY,   Bin) -> decode_array(Bin);
+decode_chunk(?TYPE_SYMBOL,  Bin) -> decode_symbol(Bin);
+decode_chunk(?TYPE_SYMLINK, Bin) -> decode_symlink(Bin).
 
 decode_fixnum(<<16#00, Rest/binary>>) ->
     {0, Rest};
@@ -82,3 +87,13 @@ decode_array(Size, <<?TYPE_ARRAY, 0, Rest/binary>>, Decoded) ->
 decode_array(Size, <<Type:8/integer, Rest/binary>>, Decoded) ->
     {DecodedChunk, Bin} = decode_chunk(Type, Rest),
     decode_array(Size - 1, Bin, [DecodedChunk|Decoded]).
+
+decode_symbol(<<Len:8/integer, Rest/binary>>) ->
+    {Sym, Bin} = split_binary(Rest, Len - 5),
+    Atom = list_to_atom(binary_to_list(Sym)),
+    rmarshal_symstorage:write(Atom),
+    {Atom, Bin}.
+
+decode_symlink(<<SymLink:8/integer, Rest/binary>>) ->
+    {ok, Atom} = rmarshal_symstorage:read(SymLink),
+    {Atom, Rest}.
