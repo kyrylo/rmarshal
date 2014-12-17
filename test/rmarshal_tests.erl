@@ -184,3 +184,10 @@ load_symbol_hello_test() ->
 
 load_symbol_array_test() ->
     ?ASSERT_EQL_LIST([[hello, goodbye, hello, goodbye, hi]], "symbol_array").
+
+%%---------------
+%% FLOAT
+%%---------------
+
+load_float_123_456_test() ->
+    ?ASSERT_EQL(123.456, "float_123.456").

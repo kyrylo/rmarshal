@@ -22,7 +22,8 @@ decode_chunk(?TYPE_BIGNUM,  Bin) -> decode_bignum(Bin);
 decode_chunk(?TYPE_IVAR,    Bin) -> decode_ivar(Bin);
 decode_chunk(?TYPE_ARRAY,   Bin) -> decode_array(Bin);
 decode_chunk(?TYPE_SYMBOL,  Bin) -> decode_symbol(Bin);
-decode_chunk(?TYPE_SYMLINK, Bin) -> decode_symlink(Bin).
+decode_chunk(?TYPE_SYMLINK, Bin) -> decode_symlink(Bin);
+decode_chunk(?TYPE_FLOAT,   Bin) -> decode_float(Bin).
 
 decode_fixnum(<<16#00, Rest/binary>>) ->
     {0, Rest};
@@ -64,7 +65,7 @@ decode_string(<<Len:8/integer, Rest/binary>>) ->
             Bitstring = <<>>,
             Encoding = Rest;
         false ->
-            {Bitstring, Encoding} = split_binary(Rest, Len - 5)
+            {Bitstring, Encoding} = split_binary(Rest, Len - ?OFFSET)
     end,
     decode_string(Bitstring, Encoding).
 
@@ -76,7 +77,7 @@ decode_string(Bitstring, <<6, $;, 0, $T, Rest/binary>>) ->
     {binary_to_list(Bitstring), Rest}.
 
 decode_array(<<Size:8, Rest/binary>>) ->
-    decode_array(Size - 5, Rest, []).
+    decode_array(Size - ?OFFSET, Rest, []).
 
 decode_array(0, Bin, Decoded) ->
     {lists:reverse(Decoded), Bin};
@@ -89,7 +90,7 @@ decode_array(Size, <<Type:8/integer, Rest/binary>>, Decoded) ->
     decode_array(Size - 1, Bin, [DecodedChunk|Decoded]).
 
 decode_symbol(<<Len:8/integer, Rest/binary>>) ->
-    {Sym, Bin} = split_binary(Rest, Len - 5),
+    {Sym, Bin} = split_binary(Rest, Len - ?OFFSET),
     Atom = list_to_atom(binary_to_list(Sym)),
     rmarshal_symstorage:write(Atom),
     {Atom, Bin}.
@@ -97,3 +98,7 @@ decode_symbol(<<Len:8/integer, Rest/binary>>) ->
 decode_symlink(<<SymLink:8/integer, Rest/binary>>) ->
     {ok, Atom} = rmarshal_symstorage:read(SymLink),
     {Atom, Rest}.
+
+decode_float(<<Len:8/integer, Rest/binary>>) ->
+    {Float, Bin} = split_binary(Rest, Len - ?OFFSET),
+    {binary_to_float(Float), Bin}.
