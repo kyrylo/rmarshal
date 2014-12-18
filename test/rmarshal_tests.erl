@@ -189,8 +189,11 @@ load_symbol_array_test() ->
 %% FLOAT
 %%---------------
 
-load_float_123_456_test() ->
-    ?ASSERT_EQL(123.456, "float_123.456").
+load_float_pos_123_456_test() ->
+    ?ASSERT_EQL(123.456, "float_pos_123.456").
+
+load_float_neg_123_456_test() ->
+    ?ASSERT_EQL(-123.456, "float_neg_123.456").
 
 %%---------------
 %% HASH
