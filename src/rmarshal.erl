@@ -3,28 +3,6 @@
 
 -include("marshal.hrl").
 
--type rnil() :: nil.
--type rbool() :: true | false.
--type fixnum() :: integer().
--type bignum() :: integer().
--type rfloat() :: float().
--type rhash() :: map().
--type rsymbol() :: atom().
--type rstring() :: list().
--type rarray() :: [rterm()].
-
--type rterm() :: rnil()
-               | rbool()
-               | fixnum()
-               | bignum()
-               | rfloat()
-               | rhash()
-               | rsymbol()
-               | rstring()
-               | rarray().
-
--type binfrag(RTermType) :: {RTermType, Undecoded :: binary()}.
-
 -spec load(<<_:16, _:_*8>>) -> {'ok', rterm()}.
 
 load(<<?MARSHAL_MAJOR:8, ?MARSHAL_MINOR:8, Rest/binary>>) ->

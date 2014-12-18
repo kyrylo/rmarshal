@@ -41,3 +41,25 @@
 -define(INT32, trunc(math:pow(2, 32))).
 
 -define(BIGNUM_LEN(Len), Len * 2 - 10).
+
+-type rnil() :: nil.
+-type rbool() :: true | false.
+-type fixnum() :: integer().
+-type bignum() :: integer().
+-type rfloat() :: float().
+-type rhash() :: map().
+-type rsymbol() :: atom().
+-type rstring() :: list().
+-type rarray() :: [rterm()].
+
+-type rterm() :: rnil()
+               | rbool()
+               | fixnum()
+               | bignum()
+               | rfloat()
+               | rhash()
+               | rsymbol()
+               | rstring()
+               | rarray().
+
+-type binfrag(RTermType) :: {RTermType, Undecoded :: binary()}.
