@@ -3,9 +3,39 @@
 
 -include("marshal.hrl").
 
+-type rnil() :: nil.
+-type rbool() :: true | false.
+-type fixnum() :: integer().
+-type bignum() :: integer().
+-type rfloat() :: float().
+-type rhash() :: map().
+-type rsymbol() :: atom().
+-type rstring() :: list().
+-type rarray() :: [rterm()].
+
+-type rterm() :: rnil()
+               | rbool()
+               | fixnum()
+               | bignum()
+               | rfloat()
+               | rhash()
+               | rsymbol()
+               | rstring()
+               | rarray().
+
+-type binfrag(RTermType) :: {RTermType, Undecoded :: binary()}.
+
+-spec load(<<_:16, _:_*8>>) -> {'ok', rterm()}.
+
 load(<<?MARSHAL_MAJOR:8, ?MARSHAL_MINOR:8, Rest/binary>>) ->
     rmarshal_symstorage:start(),
     decode(Rest, []).
+
+-spec decode(<<_:8, _:_*8>>, Decoded) -> {Undecoded, Decoded} when
+      Decoded :: rarray(),
+      Undecoded :: binary();
+            (<<>>, Decoded) -> {'ok', Decoded} when
+      Decoded :: rarray().
 
 decode(<<>>, Decoded) ->
     rmarshal_symstorage:stop(),
@@ -13,6 +43,11 @@ decode(<<>>, Decoded) ->
 decode(<<Type:8, Rest/binary>>, Decoded) ->
     {DecodedChunk, UndecodedRest} = decode_chunk(Type, Rest),
     decode(UndecodedRest, [DecodedChunk|Decoded]).
+
+-spec decode_chunk(Type, Undecoded) -> BinaryFragment when
+      Type :: byte(),
+      Undecoded :: binary(),
+      BinaryFragment :: binfrag(rterm()).
 
 decode_chunk(?TYPE_NIL,     Bin) -> {nil, Bin};
 decode_chunk(?TYPE_TRUE,    Bin) -> {true, Bin};
@@ -25,6 +60,10 @@ decode_chunk(?TYPE_SYMBOL,  Bin) -> decode_symbol(Bin);
 decode_chunk(?TYPE_SYMLINK, Bin) -> decode_symlink(Bin);
 decode_chunk(?TYPE_FLOAT,   Bin) -> decode_float(Bin);
 decode_chunk(?TYPE_HASH,    Bin) -> decode_hash(Bin).
+
+-spec decode_fixnum(Undecoded) -> BinaryFragment when
+      Undecoded :: binary(),
+      BinaryFragment :: binfrag(fixnum()).
 
 decode_fixnum(<<16#00, Rest/binary>>) ->
     {0, Rest};
@@ -49,6 +88,10 @@ decode_fixnum(<<X:8/signed, Rest/binary>>) when 0 < X, X =< 128 ->
 decode_fixnum(<<X:8/signed, Rest/binary>>) when -128 =< X, X < 0 ->
     {X + ?OFFSET, Rest}.
 
+-spec decode_bignum(Bin) -> BinaryFragment when
+      Bin :: binary(),
+      BinaryFragment :: binfrag(bignum()).
+
 decode_bignum(<<Sign:8/bitstring, Len:8, Rest/binary>>) ->
     {X, Bin} = split_binary(Rest, ?BIGNUM_LEN(Len)),
     Decoded = binary:decode_unsigned(X, little),
@@ -57,8 +100,14 @@ decode_bignum(<<Sign:8/bitstring, Len:8, Rest/binary>>) ->
         <<$->> -> {Decoded * -1, Bin}
     end.
 
+-spec decode_ivar(<<_:8, _:_*8>>) -> BinaryFragment when
+      BinaryFragment :: binfrag(rstring()).
+
 decode_ivar(<<?TYPE_STRING, Rest/binary>>) ->
     decode_string(Rest).
+
+-spec decode_string(<<_:8, _:_*8>>) -> BinaryFragment when
+      BinaryFragment :: binfrag(rstring()).
 
 decode_string(<<Len:8/integer, Rest/binary>>) ->
     case Len =:= 0 of
@@ -70,6 +119,10 @@ decode_string(<<Len:8/integer, Rest/binary>>) ->
     end,
     decode_string(Bitstring, Encoding).
 
+-spec decode_string(Bitstring, <<_:40, _:_*8>>) -> BinaryFragment when
+      Bitstring :: binary(),
+      BinaryFragment :: binfrag(rstring()).
+
 %% Bitstring + Encoding. I don't know how to interpret encoding.
 %% WTF is T or :/;?
 decode_string(Bitstring, <<6, $:, 6, $E, $T, Rest/binary>>) ->
@@ -77,8 +130,16 @@ decode_string(Bitstring, <<6, $:, 6, $E, $T, Rest/binary>>) ->
 decode_string(Bitstring, <<6, $;, 0, $T, Rest/binary>>) ->
     {binary_to_list(Bitstring), Rest}.
 
+-spec decode_array(<<_:8, _:_*8>>) -> BinaryFragment when
+      BinaryFragment :: binfrag(rterm()).
+
 decode_array(<<Size:8, Rest/binary>>) ->
     decode_array(Size - ?OFFSET, Rest, []).
+
+-spec decode_array(Size, <<_:8, _:_*8>>, Decoded) -> BinaryFragment when
+      Size :: pos_integer(),
+      Decoded :: rarray(),
+      BinaryFragment :: binfrag(rterm()).
 
 decode_array(0, Bin, Decoded) ->
     {lists:reverse(Decoded), Bin};
@@ -90,22 +151,39 @@ decode_array(Size, <<Type:8/integer, Rest/binary>>, Decoded) ->
     {DecodedChunk, Bin} = decode_chunk(Type, Rest),
     decode_array(Size - 1, Bin, [DecodedChunk|Decoded]).
 
+-spec decode_symbol(<<_:8, _:_*8>>) -> BinaryFragment when
+      BinaryFragment :: binfrag(rsymbol()).
+
 decode_symbol(<<Len:8/integer, Rest/binary>>) ->
     {Sym, Bin} = split_binary(Rest, Len - ?OFFSET),
     Atom = list_to_atom(binary_to_list(Sym)),
     rmarshal_symstorage:write(Atom),
     {Atom, Bin}.
 
+-spec decode_symlink(<<_:8, _:_*8>>) -> BinaryFragment when
+      BinaryFragment :: binfrag(rsymbol()).
+
 decode_symlink(<<SymLink:8/integer, Rest/binary>>) ->
     {ok, Atom} = rmarshal_symstorage:read(SymLink),
     {Atom, Rest}.
+
+-spec decode_float(<<_:8, _:_*8>>) -> BinaryFragment when
+      BinaryFragment :: binfrag(rfloat()).
 
 decode_float(<<Len:8/integer, Rest/binary>>) ->
     {Float, Bin} = split_binary(Rest, Len - ?OFFSET),
     {binary_to_float(Float), Bin}.
 
+-spec decode_hash(<<_:8, _:_*8>>) -> BinaryFragment when
+      BinaryFragment :: binfrag(rhash()).
+
 decode_hash(<<Size:8/integer, Rest/binary>>) ->
     decode_hash(Size - ?OFFSET, Rest, maps:new()).
+
+-spec decode_hash(Size, <<_:8, _:_*8>>, Decoded) -> BinaryFragment when
+      Size :: pos_integer(),
+      Decoded :: rhash(),
+      BinaryFragment :: binfrag(rhash()).
 
 decode_hash(Size, Bin, Decoded) when Size =< 0 ->
     {Decoded, Bin};
