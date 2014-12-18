@@ -1,12 +1,11 @@
 {application, rmarshal,
  [
-  {description, ""},
-  {vsn, "1"},
+  {description, "Deserialises Ruby objects dumped by `Marshal.dump` into Erlang terms"},
+  {vsn, "0.0.1"},
   {registered, []},
   {applications, [
                   kernel,
                   stdlib
                  ]},
-  {mod, { rmarshal_app, []}},
   {env, []}
  ]}.
