@@ -102,6 +102,10 @@ decode_string(<<Len:8/integer, Rest/binary>>) ->
 %% WTF is T or :/;?
 decode_string(Bitstring, <<6, $:, 6, $E, $T, Rest/binary>>) ->
     {binary_to_list(Bitstring), Rest};
+decode_string(Bitstring, <<6, $;, $\t, $T, Rest/binary>>) ->
+    {binary_to_list(Bitstring), Rest};
+%% decode_string(Bitstring, <<6, $:, 6, $E, $F, Rest/binary>>) ->
+%%     {binary_to_list(Bitstring), Rest};
 decode_string(Bitstring, <<6, $;, 0, $T, Rest/binary>>) ->
     {binary_to_list(Bitstring), Rest}.
 

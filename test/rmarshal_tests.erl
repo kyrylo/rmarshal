@@ -222,3 +222,15 @@ load_hash_arrays_symbols_and_strings_test() ->
        [#{event => module_added, data => [#{foo => bar, baz => "1"}]}],
        "hash_arrays_symbols_and_strings"
       ).
+
+load_hash_with_string_with_weird_encoding_test() ->
+    ?ASSERT_EQL(
+       #{data =>
+             #{includes => ["PP::ObjectMixin","Kernel"],
+               inherits_from => 'ScriptError',
+               name => "SyntaxError",
+               nested_under => ["Object"],
+               nesting_level => 1,
+               origin => core,
+               type => class},
+         event => module_added}, "hash_with_string_with_weird_encoding").
