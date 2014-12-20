@@ -216,3 +216,9 @@ load_hash_string_keys_test() ->
 
 load_hash_same_key_and_val_test() ->
     ?ASSERT_EQL(#{one => one}, "hash_same_key_and_val").
+
+load_hash_arrays_symbols_and_strings_test() ->
+    ?ASSERT_EQL(
+       [#{event => module_added, data => [#{foo => bar, baz => "1"}]}],
+       "hash_arrays_symbols_and_strings"
+      ).
