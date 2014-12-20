@@ -88,12 +88,9 @@ decode_ivar(<<?TYPE_STRING, Rest/binary>>) ->
       BinaryFragment :: binfrag(rstring()).
 
 decode_string(<<Len:8/integer, Rest/binary>>) ->
-    case Len =:= 0 of
-        true ->
-            Bitstring = <<>>,
-            Encoding = Rest;
-        false ->
-            {Bitstring, Encoding} = split_binary(Rest, Len - ?OFFSET)
+    {Bitstring, Encoding} = case Len =:= 0 of
+        true  -> {<<>>, Rest};
+        false -> split_binary(Rest, Len - ?OFFSET)
     end,
     decode_string(Bitstring, Encoding).
 
