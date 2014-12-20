@@ -2,3 +2,4 @@
 .rebar
 ebin
 *.beam
+doc
