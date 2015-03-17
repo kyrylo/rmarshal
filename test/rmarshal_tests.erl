@@ -214,6 +214,9 @@ load_hash_empty_nested_test() ->
 load_hash_string_keys_test() ->
     ?ASSERT_EQL(#{"one" => 1, "two" => 2}, "hash_string_keys").
 
+load_hash_string_values_test() ->
+    ?ASSERT_EQL(#{a => "a", b => "b"}, "hash_string_values").
+
 load_hash_same_key_and_val_test() ->
     ?ASSERT_EQL(#{one => one}, "hash_same_key_and_val").
 
