@@ -217,6 +217,18 @@ load_hash_string_keys_test() ->
 load_hash_string_values_test() ->
     ?ASSERT_EQL(#{a => "a", b => "b"}, "hash_string_values").
 
+load_hash_fixnum_string_values_test() ->
+    ?ASSERT_EQL(#{a => 1, b => "b", c => "c"}, "hash_fixnum_string_values").
+
+load_hash_complex_fixnum_string_values_test() ->
+    ?ASSERT_EQL(#{event => module_added, data => #{
+                    name => "Pry::Command::ShowInfo",
+                    nested_under => ["Pry::Command", "Pry", "Object"],
+                    nesting_level => 3,
+                    object_id => 18841260
+                   }
+                 }, "hash_complex_fixnum_string_values").
+
 load_hash_same_key_and_val_test() ->
     ?ASSERT_EQL(#{one => one}, "hash_same_key_and_val").
 
