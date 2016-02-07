@@ -1,6 +1,8 @@
 RMarshal
 ========
 
+[![Build Status](https://travis-ci.org/kyrylo/rmarshal.svg?branch=master)](https://travis-ci.org/kyrylo/rmarshal)
+
 The library deserialises Ruby objects dumped by `Marshal.dump` into Erlang
 terms. It's like `Marshal.load`, but for Erlang. Currently, it doesn't support
 loading advanced data structures like classes, but the vital things are
