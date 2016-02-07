@@ -50,7 +50,7 @@ end
 Read the dumped data with Erlang and load it with help of the RMarshal library:
 
 ```erlang
-# loader.erl
+%% loader.erl
 load_ruby_data() ->
     case file:read_file("data.dat") of
         {ok, BinaryData} -> rmarshal:load(BinaryData);
@@ -68,9 +68,10 @@ API
 ### rmarshal:load/1
 
 Accepts binary string formatted according to the official
-[Marshal Format][marshal-format]. Returns a tuple with
+[Marshal Format][marshal-format]. Returns a tuple with in the format `{ok,
+rterm()}`.
 
-```
+```erlang
 {ok, Decoded} = rmarshal:load(BinaryData).
 ```
 
