@@ -26,7 +26,7 @@ Installation
 ### Rebar3
 
 ```erlang
-% rebar.config
+%% rebar.config
 {deps, [
   {rmarshal, {git, "git://github.com/kyrylo/rmarshal.git", {tag, "v0.0.4"}}}
 ]}.
