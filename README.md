@@ -2,6 +2,7 @@ RMarshal
 ========
 
 [![Build Status](https://travis-ci.org/kyrylo/rmarshal.svg?branch=master)](https://travis-ci.org/kyrylo/rmarshal)
+[![semver]](http://semver.org)
 
 The library deserialises Ruby objects dumped by `Marshal.dump` into Erlang
 terms. It's like `Marshal.load`, but for Erlang. Currently, it doesn't support
@@ -51,3 +52,5 @@ Licence
 
 The project uses the zlib License. See the LICENCE.txt file for more
 information.
+
+[semver]: https://img.shields.io/:semver-0.0.4-brightgreen.svg?style=flat
