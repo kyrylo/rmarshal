@@ -6,38 +6,46 @@
 -spec load(<<_:16, _:_*8>>) -> {'ok', rterm()}.
 
 load(<<?MARSHAL_MAJOR:8, ?MARSHAL_MINOR:8, Rest/binary>>) ->
-    rmarshal_symstorage:start(),
-    decode(Rest, []).
+    decode(Rest, [], maps:new()).
 
--spec decode(<<_:8, _:_*8>>, Decoded) -> {Undecoded, Decoded} when
+-spec decode(<<_:8, _:_*8>>, Decoded, SymRefs) -> {Undecoded, Decoded} when
       Decoded :: rarray(),
+      SymRefs :: map(),
       Undecoded :: binary();
-            (<<>>, Decoded) -> {'ok', Decoded} when
+            (<<>>, Decoded, _SymRefs) -> {'ok', Decoded} when
       Decoded :: rarray().
 
-decode(<<>>, Decoded) ->
-    rmarshal_symstorage:stop(),
+decode(<<>>, Decoded, _SymRefs) ->
     {ok, Decoded};
-decode(<<Type:8, Rest/binary>>, Decoded) ->
-    {DecodedChunk, UndecodedRest} = decode_chunk(Type, Rest),
-    decode(UndecodedRest, [DecodedChunk|Decoded]).
+decode(<<Type:8, Rest/binary>>, Decoded, SymRefs) ->
+    {DecodedChunk, UndecodedRest, NewSymRefs} = decode_chunk(Type, Rest, SymRefs),
+    decode(UndecodedRest, [DecodedChunk|Decoded], NewSymRefs).
 
--spec decode_chunk(Type, Undecoded) -> BinaryFragment when
+-spec decode_chunk(Type, Undecoded, SymRefs) -> BinaryFragment when
       Type :: byte(),
       Undecoded :: binary(),
+      SymRefs :: map(),
       BinaryFragment :: binfrag(rterm()).
 
-decode_chunk(?TYPE_NIL,     Bin) -> {nil, Bin};
-decode_chunk(?TYPE_TRUE,    Bin) -> {true, Bin};
-decode_chunk(?TYPE_FALSE,   Bin) -> {false, Bin};
-decode_chunk(?TYPE_FIXNUM,  Bin) -> decode_fixnum(Bin);
-decode_chunk(?TYPE_BIGNUM,  Bin) -> decode_bignum(Bin);
-decode_chunk(?TYPE_IVAR,    Bin) -> decode_ivar(Bin);
-decode_chunk(?TYPE_ARRAY,   Bin) -> decode_array(Bin);
-decode_chunk(?TYPE_SYMBOL,  Bin) -> decode_symbol(Bin);
-decode_chunk(?TYPE_SYMLINK, Bin) -> decode_symlink(Bin);
-decode_chunk(?TYPE_FLOAT,   Bin) -> decode_float(Bin);
-decode_chunk(?TYPE_HASH,    Bin) -> decode_hash(Bin).
+decode_chunk(?TYPE_NIL,     Bin, SymRefs) -> {nil, Bin, SymRefs};
+decode_chunk(?TYPE_TRUE,    Bin, SymRefs) -> {true, Bin, SymRefs};
+decode_chunk(?TYPE_FALSE,   Bin, SymRefs) -> {false, Bin, SymRefs};
+decode_chunk(?TYPE_FIXNUM,  Bin, SymRefs) ->
+    {Fixnum, Undecoded} = decode_fixnum(Bin),
+    {Fixnum, Undecoded, SymRefs};
+decode_chunk(?TYPE_BIGNUM,  Bin, SymRefs) ->
+    {Bignum, Undecoded} = decode_bignum(Bin),
+    {Bignum, Undecoded, SymRefs};
+decode_chunk(?TYPE_IVAR,    Bin, SymRefs) ->
+    {Ivar, Undecoded} = decode_ivar(Bin),
+    {Ivar, Undecoded, SymRefs};
+decode_chunk(?TYPE_ARRAY,   Bin, SymRefs) -> decode_array(Bin, SymRefs);
+decode_chunk(?TYPE_SYMBOL,  Bin, SymRefs) -> decode_symbol(Bin, SymRefs);
+decode_chunk(?TYPE_SYMLINK, Bin, SymRefs) -> decode_symlink(Bin, SymRefs);
+decode_chunk(?TYPE_FLOAT,   Bin, SymRefs) ->
+    {Float, Undecoded} = decode_float(Bin),
+    {Float, Undecoded, SymRefs};
+decode_chunk(?TYPE_HASH,    Bin,  SymRefs) -> decode_hash(Bin, SymRefs).
 
 -spec decode_fixnum(Undecoded) -> BinaryFragment when
       Undecoded :: binary(),
@@ -115,42 +123,50 @@ decode_string(Bitstring, <<6, $;, 6, $T, Rest/binary>>) ->
 decode_string(Bitstring, <<6, $;, 0, $T, Rest/binary>>) ->
     {binary_to_list(Bitstring), Rest}.
 
--spec decode_array(<<_:8, _:_*8>>) -> BinaryFragment when
+-spec decode_array(<<_:8, _:_*8>>, SymRefs) -> BinaryFragment when
+      SymRefs :: map(),
       BinaryFragment :: binfrag(rterm()).
 
-decode_array(<<Size:8, Rest/binary>>) ->
-    decode_array(Size - ?OFFSET, Rest, []).
+decode_array(<<Size:8, Rest/binary>>, SymRefs) ->
+    decode_array(Size - ?OFFSET, Rest, [], SymRefs).
 
--spec decode_array(Size, <<_:8, _:_*8>>, Decoded) -> BinaryFragment when
+-spec decode_array(Size, <<_:8, _:_*8>>, Decoded, SymRefs) -> BinaryFragment when
       Size :: pos_integer(),
       Decoded :: rarray(),
+      SymRefs :: map(),
       BinaryFragment :: binfrag(rterm()).
 
-decode_array(0, Bin, Decoded) ->
-    {lists:reverse(Decoded), Bin};
-decode_array(_Size, <<>>, _Decoded) ->
-    {[], <<>>};
-decode_array(Size, <<?TYPE_ARRAY, 0, Rest/binary>>, Decoded) ->
-    decode_array(Size - 1, Rest, [[]|Decoded]);
-decode_array(Size, <<Type:8/integer, Rest/binary>>, Decoded) ->
-    {DecodedChunk, Bin} = decode_chunk(Type, Rest),
-    decode_array(Size - 1, Bin, [DecodedChunk|Decoded]).
+decode_array(0, Bin, Decoded, SymRefs) ->
+    {lists:reverse(Decoded), Bin, SymRefs};
+decode_array(_Size, <<>>, _Decoded, SymRefs) ->
+    {[], <<>>, SymRefs};
+decode_array(Size, <<?TYPE_ARRAY, 0, Rest/binary>>, Decoded, SymRefs) ->
+    decode_array(Size - 1, Rest, [[]|Decoded], SymRefs);
+decode_array(Size, <<Type:8/integer, Rest/binary>>, Decoded, SymRefs) ->
+    {DecodedChunk, Bin, NewSymRefs} = decode_chunk(Type, Rest, SymRefs),
+    decode_array(Size - 1, Bin, [DecodedChunk|Decoded], NewSymRefs).
 
--spec decode_symbol(<<_:8, _:_*8>>) -> BinaryFragment when
+-spec decode_symbol(<<_:8, _:_*8>>, SymRefs) -> BinaryFragment when
+      SymRefs :: map(),
       BinaryFragment :: binfrag(rsymbol()).
 
-decode_symbol(<<Len:8/integer, Rest/binary>>) ->
+decode_symbol(<<Len:8/integer, Rest/binary>>, SymRefs) ->
     {Sym, Bin} = split_binary(Rest, Len - ?OFFSET),
     Atom = list_to_atom(binary_to_list(Sym)),
-    rmarshal_symstorage:write(Atom),
-    {Atom, Bin}.
+    SymRefSize = maps:size(SymRefs),
+    Offset = case SymRefSize of
+                 0 -> 0;
+                 _ -> ?OFFSET
+             end,
+    NewSymRefs = maps:put(SymRefSize + Offset, Atom, SymRefs),
+    {Atom, Bin, NewSymRefs}.
 
--spec decode_symlink(<<_:8, _:_*8>>) -> BinaryFragment when
+-spec decode_symlink(<<_:8, _:_*8>>, SymRefs) -> BinaryFragment when
+      SymRefs :: map(),
       BinaryFragment :: binfrag(rsymbol()).
 
-decode_symlink(<<SymLink:8/integer, Rest/binary>>) ->
-    {ok, Atom} = rmarshal_symstorage:read(SymLink),
-    {Atom, Rest}.
+decode_symlink(<<SymLink:8/integer, Rest/binary>>, SymRefs) ->
+    {maps:get(SymLink, SymRefs), Rest, SymRefs}.
 
 -spec decode_float(<<_:8, _:_*8>>) -> BinaryFragment when
       BinaryFragment :: binfrag(rfloat()).
@@ -159,23 +175,25 @@ decode_float(<<Len:8/integer, Rest/binary>>) ->
     {Float, Bin} = split_binary(Rest, Len - ?OFFSET),
     {binary_to_float(Float), Bin}.
 
--spec decode_hash(<<_:8, _:_*8>>) -> BinaryFragment when
+-spec decode_hash(<<_:8, _:_*8>>, SymRefs) -> BinaryFragment when
+      SymRefs :: map(),
       BinaryFragment :: binfrag(rhash()).
 
-decode_hash(<<Size:8/integer, Rest/binary>>) ->
-    decode_hash(Size - ?OFFSET, Rest, maps:new()).
+decode_hash(<<Size:8/integer, Rest/binary>>, SymRefs) ->
+    decode_hash(Size - ?OFFSET, Rest, maps:new(), SymRefs).
 
--spec decode_hash(Size, <<_:8, _:_*8>>, Decoded) -> BinaryFragment when
+-spec decode_hash(Size, <<_:8, _:_*8>>, Decoded, SymRefs) -> BinaryFragment when
       Size :: pos_integer(),
       Decoded :: rhash(),
+      SymRefs :: map(),
       BinaryFragment :: binfrag(rhash()).
 
-decode_hash(Size, Bin, Decoded) when Size =< 0 ->
-    {Decoded, Bin};
-decode_hash(_Size, <<>>, _Decoded) ->
-    {#{}, <<>>};
-decode_hash(Size, <<Type:8/integer, Rest/binary>>, Decoded) ->
-    {DecodedKey, Bin} = decode_chunk(Type, Rest),
+decode_hash(Size, Bin, Decoded, SymRefs) when Size =< 0 ->
+    {Decoded, Bin, SymRefs};
+decode_hash(_Size, <<>>, _Decoded, SymRefs) ->
+    {#{}, <<>>, SymRefs};
+decode_hash(Size, <<Type:8/integer, Rest/binary>>, Decoded, SymRefs) ->
+    {DecodedKey, Bin, NewSymRefs} = decode_chunk(Type, Rest, SymRefs),
     <<Type2:8/integer, Rest2/binary>> = Bin,
-    {DecodedVal, Bin2} = decode_chunk(Type2, Rest2),
-    decode_hash(Size - 1, Bin2, maps:put(DecodedKey, DecodedVal, Decoded)).
+    {DecodedVal, Bin2, NewSymRefs2} = decode_chunk(Type2, Rest2, NewSymRefs),
+    decode_hash(Size - 1, Bin2, maps:put(DecodedKey, DecodedVal, Decoded), NewSymRefs2).
