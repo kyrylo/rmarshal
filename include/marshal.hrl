@@ -62,4 +62,4 @@
                | rstring()
                | rarray().
 
--type binfrag(RTermType) :: {RTermType, Undecoded :: binary()}.
+-type binfrag(RTermType) :: {RTermType, Undecoded :: binary(), map()}.
