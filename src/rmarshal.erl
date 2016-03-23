@@ -155,8 +155,8 @@ decode_symbol(<<Len:8/integer, Rest/binary>>, SymRefs) ->
     Atom = list_to_atom(binary_to_list(Sym)),
     SymRefSize = maps:size(SymRefs),
     Offset = case SymRefSize of
-                 0 -> 0;
-                 _ -> ?OFFSET
+                 0 -> 5;
+                 _ -> ?OFFSET +1
              end,
     NewSymRefs = maps:put(SymRefSize + Offset, Atom, SymRefs),
     {Atom, Bin, NewSymRefs}.
