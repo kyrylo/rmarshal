@@ -229,6 +229,15 @@ load_hash_complex_fixnum_string_values_test() ->
                    }
                  }, "hash_complex_fixnum_string_values").
 
+load_hash_complex_mix_test() ->
+    ?ASSERT_EQL(#{trace_event =>
+                      #{lineno => 216,
+                        method_id => mon_synchronize,
+                        path => "/Users/kyrylo/.rubies/ruby-2.3.0/lib/ruby/2.3.0/monitor.rb",
+                        raised_exception => nil,
+                        return_value => [foo, bar, foo],
+                        type => line}}, "hash_complex_mix").
+
 load_hash_same_key_and_val_test() ->
     ?ASSERT_EQL(#{one => one}, "hash_same_key_and_val").
 

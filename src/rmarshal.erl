@@ -154,11 +154,11 @@ decode_symbol(<<Len:8/integer, Rest/binary>>, SymRefs) ->
     {Sym, Bin} = split_binary(Rest, Len - ?OFFSET),
     Atom = list_to_atom(binary_to_list(Sym)),
     SymRefSize = maps:size(SymRefs),
-    Offset = case SymRefSize of
-                 0 -> ?OFFSET;
-                 _ -> ?OFFSET + 1
-             end,
-    NewSymRefs = maps:put(SymRefSize + Offset, Atom, SymRefs),
+    SymLink = case SymRefSize of
+                  0 -> 0;
+                  _ -> SymRefSize + ?OFFSET
+              end,
+    NewSymRefs = maps:put(SymLink, Atom, SymRefs),
     {Atom, Bin, NewSymRefs}.
 
 -spec decode_symlink(<<_:8, _:_*8>>, SymRefs) -> BinaryFragment when
@@ -166,6 +166,10 @@ decode_symbol(<<Len:8/integer, Rest/binary>>, SymRefs) ->
       BinaryFragment :: binfrag(rsymbol()).
 
 decode_symlink(<<SymLink:8/integer, Rest/binary>>, SymRefs) ->
+    %% Offset = case SymLink of
+    %%              0 -> 0;
+    %%              _ -> SymLink
+    %%          end,
     {maps:get(SymLink, SymRefs), Rest, SymRefs}.
 
 -spec decode_float(<<_:8, _:_*8>>) -> BinaryFragment when
